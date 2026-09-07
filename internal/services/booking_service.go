@@ -50,7 +50,7 @@ func NewBookingService(pool txBeginner, bookings bookingRepository) *BookingServ
 }
 
 // Create validates the request, reserves rooms atomically, and persists a booking.
-// TODO: handle the case where check_in and check_out are the same day —
+// TODO: handle the case where check_in and check_out are the same day
 // currently produces a zero-night booking with zero price
 func (s *BookingService) Create(ctx context.Context, req CreateBookingRequest) (*models.Booking, error) {
 	if err := validateCreate(req); err != nil {
