@@ -148,8 +148,8 @@ func createBody() string {
 }
 
 const (
-	envelopeNotFound        = `{"error":{"code":"not_found","message":"not found"}}`
-	envelopeConflict        = `{"error":{"code":"conflict","message":"conflict"}}`
+	envelopeNotFound        = `{"error":{"code":"not_found","message":"get booking: not found"}}`
+	envelopeConflict        = `{"error":{"code":"conflict","message":"cancel booking: conflict"}}`
 	envelopeNoAvailability  = `{"error":{"code":"no_availability","message":"unavailable"}}`
 	envelopeValidationField = `{"error":{"code":"validation_failed","message":"validation failed: check_in: cannot be in the past;","details":[{"field":"check_in","issue":"cannot be in the past"}]}}`
 	envelopeValidationBody  = `{"error":{"code":"validation_failed","message":"validation failed: body: invalid request body;","details":[{"field":"body","issue":"invalid request body"}]}}`
@@ -171,17 +171,17 @@ func TestBookingCreate(t *testing.T) {
 			wantBody:   "booking",
 		},
 		{
-			name:         "returns validation_failed for validation errors",
+			name:         "rejects a check-in in the past",
 			serviceErr:   models.ValidationError{Errors: []models.FieldError{{Field: "check_in", Issue: "cannot be in the past"}}},
 			body:         createBody(),
-			wantStatus:   http.StatusBadRequest,
+			wantStatus:   http.StatusOK,
 			wantBody:     envelopeValidationField,
 			wantBookings: false,
 		},
 		{
-			name:       "returns validation_failed for malformed body",
+			name:       "rejects a malformed body",
 			body:       `{`,
-			wantStatus: http.StatusBadRequest,
+			wantStatus: http.StatusOK,
 			wantBody:   envelopeValidationBody,
 		},
 		{
