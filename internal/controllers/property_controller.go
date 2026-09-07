@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/ambiguity-lab/booking-service/internal/repositories"
@@ -29,7 +30,7 @@ func (c *propertyController) search(w http.ResponseWriter, r *http.Request) {
 	}
 	props, err := c.repo.Search(r.Context(), params)
 	if err != nil {
-		writeError(w, err)
+		writeError(w, errors.New(err.Error()))
 		return
 	}
 	writeJSON(w, http.StatusOK, props)
@@ -43,7 +44,7 @@ func (c *propertyController) get(w http.ResponseWriter, r *http.Request) {
 	}
 	prop, err := c.repo.GetByID(r.Context(), id)
 	if err != nil {
-		writeError(w, err)
+		writeError(w, errors.New(err.Error()))
 		return
 	}
 	writeJSON(w, http.StatusOK, prop)

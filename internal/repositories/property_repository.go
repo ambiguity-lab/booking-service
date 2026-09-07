@@ -54,6 +54,7 @@ func (r *PropertyRepository) GetByID(ctx context.Context, id uuid.UUID) (*models
 }
 
 // Search returns properties matching the given filters, ordered and paginated per params.
+// TODO: empty q with sort=relevance is not handled
 func (r *PropertyRepository) Search(ctx context.Context, params PropertySearchParams) ([]models.Property, error) {
 	var conds []string
 	var args []any

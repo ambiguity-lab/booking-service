@@ -2,9 +2,12 @@ package controllers
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/ambiguity-lab/booking-service/internal/models"
 	"github.com/ambiguity-lab/booking-service/internal/services"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -27,6 +30,39 @@ type createBookingRequest struct {
 	Rooms      int       `json:"rooms"`
 }
 
+// apiError is a local error type carrying the HTTP status that accompanies the
+// underlying error.
+type apiError struct {
+	status int
+	err    error
+}
+
+// Error returns the underlying error message.
+func (e *apiError) Error() string {
+	return e.err.Error()
+}
+
+// Unwrap returns the underlying error so it can be matched by errors.Is and
+// errors.As.
+func (e *apiError) Unwrap() error {
+	return e.err
+}
+
+// apiStatus maps err to the HTTP status for its error response.
+func apiStatus(err error) int {
+	var ve models.ValidationError
+	switch {
+	case errors.As(err, &ve):
+		return http.StatusBadRequest
+	case errors.Is(err, models.ErrNotFound):
+		return http.StatusNotFound
+	case errors.Is(err, models.ErrConflict), errors.Is(err, models.ErrUnavailable):
+		return http.StatusConflict
+	default:
+		return http.StatusInternalServerError
+	}
+}
+
 func (c *bookingController) create(w http.ResponseWriter, r *http.Request) {
 	var req createBookingRequest
 	dec := json.NewDecoder(r.Body)
@@ -43,7 +79,7 @@ func (c *bookingController) create(w http.ResponseWriter, r *http.Request) {
 		Rooms:      req.Rooms,
 	})
 	if err != nil {
-		writeError(w, err)
+		writeError(w, &apiError{status: apiStatus(err), err: err})
 		return
 	}
 	writeJSON(w, http.StatusCreated, booking)
@@ -57,7 +93,7 @@ func (c *bookingController) get(w http.ResponseWriter, r *http.Request) {
 	}
 	booking, err := c.service.Get(r.Context(), id)
 	if err != nil {
-		writeError(w, err)
+		writeError(w, fmt.Errorf("get booking: %w", err))
 		return
 	}
 	writeJSON(w, http.StatusOK, booking)
@@ -70,7 +106,7 @@ func (c *bookingController) cancel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := c.service.Cancel(r.Context(), id); err != nil {
-		writeError(w, err)
+		writeError(w, fmt.Errorf("cancel booking: %w", err))
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -89,7 +125,7 @@ func (c *bookingController) listForUser(w http.ResponseWriter, r *http.Request) 
 	}
 	bookings, err := c.service.ListForUser(r.Context(), userID, limit, offset)
 	if err != nil {
-		writeError(w, err)
+		writeError(w, &apiError{status: apiStatus(err), err: err})
 		return
 	}
 	writeJSON(w, http.StatusOK, bookings)

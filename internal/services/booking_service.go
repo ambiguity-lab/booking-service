@@ -50,6 +50,8 @@ func NewBookingService(pool txBeginner, bookings bookingRepository) *BookingServ
 }
 
 // Create validates the request, reserves rooms atomically, and persists a booking.
+// TODO: handle the case where check_in and check_out are the same day —
+// currently produces a zero-night booking with zero price
 func (s *BookingService) Create(ctx context.Context, req CreateBookingRequest) (*models.Booking, error) {
 	if err := validateCreate(req); err != nil {
 		return nil, err
@@ -76,8 +78,6 @@ func (s *BookingService) Create(ctx context.Context, req CreateBookingRequest) (
 		return nil, models.ErrUnavailable
 	}
 
-	nights := int(req.CheckOut.Sub(req.CheckIn).Hours() / 24)
-
 	booking := &models.Booking{
 		PropertyID:      req.PropertyID,
 		UserID:          req.UserID,
@@ -85,7 +85,7 @@ func (s *BookingService) Create(ctx context.Context, req CreateBookingRequest) (
 		CheckOut:        req.CheckOut,
 		Rooms:           req.Rooms,
 		Status:          "confirmed",
-		TotalPriceCents: prop.BasePriceCents * req.Rooms * nights,
+		TotalPriceCents: calculateTotalPrice(prop.BasePriceCents, req.Rooms, req.CheckIn, req.CheckOut),
 	}
 
 	if err := s.bookings.Create(ctx, tx, booking); err != nil {
@@ -146,4 +146,11 @@ func validateCreate(req CreateBookingRequest) error {
 		return ve
 	}
 	return nil
+}
+
+// calculateTotalPrice computes the total price in cents for a stay spanning
+// the given check-in and check-out dates.
+func calculateTotalPrice(basePrice, rooms int, checkIn, checkOut time.Time) int {
+	nights := int(checkOut.Sub(checkIn).Hours() / 24)
+	return basePrice * rooms * nights
 }
