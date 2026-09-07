@@ -5,9 +5,8 @@ import (
 	"time"
 
 	"github.com/ambiguity-lab/booking-service/internal/models"
-	"github.com/ambiguity-lab/booking-service/internal/repositories"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5"
 )
 
 // CreateBookingRequest describes a booking the caller wants to place.
@@ -19,19 +18,34 @@ type CreateBookingRequest struct {
 	Rooms      int
 }
 
-// BookingService orchestrates booking lifecycle operations.
-type BookingService struct {
-	properties *repositories.PropertyRepository
-	bookings   *repositories.BookingRepository
-	pool       *pgxpool.Pool
+// bookingRepository is the subset of the booking data layer the service needs.
+// It is implemented by *repositories.BookingRepository.
+type bookingRepository interface {
+	LockProperty(ctx context.Context, tx pgx.Tx, propertyID uuid.UUID) (*models.Property, error)
+	CountOverlappingRooms(ctx context.Context, tx pgx.Tx, propertyID uuid.UUID, checkIn, checkOut time.Time) (int, error)
+	Create(ctx context.Context, tx pgx.Tx, b *models.Booking) error
+	GetByID(ctx context.Context, id uuid.UUID) (*models.Booking, error)
+	UpdateStatus(ctx context.Context, id uuid.UUID, status string) error
+	ListByUser(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.Booking, error)
 }
 
-// NewBookingService wires together the repositories and pool into a single BookingService.
-func NewBookingService(pool *pgxpool.Pool, properties *repositories.PropertyRepository, bookings *repositories.BookingRepository) *BookingService {
+// txBeginner starts transactions. It is implemented by *pgxpool.Pool.
+type txBeginner interface {
+	Begin(ctx context.Context) (pgx.Tx, error)
+}
+
+// BookingService orchestrates booking lifecycle operations.
+type BookingService struct {
+	pool     txBeginner
+	bookings bookingRepository
+}
+
+// NewBookingService wires together the transaction starter and booking data layer
+// into a single BookingService.
+func NewBookingService(pool txBeginner, bookings bookingRepository) *BookingService {
 	return &BookingService{
-		properties: properties,
-		bookings:   bookings,
-		pool:       pool,
+		pool:     pool,
+		bookings: bookings,
 	}
 }
 

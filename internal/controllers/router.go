@@ -4,6 +4,7 @@
 package controllers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -14,7 +15,24 @@ import (
 	"github.com/ambiguity-lab/booking-service/internal/repositories"
 	"github.com/ambiguity-lab/booking-service/internal/services"
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 )
+
+// bookingService is the booking operations the handlers depend on. It is
+// implemented by *services.BookingService.
+type bookingService interface {
+	Create(ctx context.Context, req services.CreateBookingRequest) (*models.Booking, error)
+	Get(ctx context.Context, id uuid.UUID) (*models.Booking, error)
+	Cancel(ctx context.Context, id uuid.UUID) error
+	ListForUser(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.Booking, error)
+}
+
+// propertyRepo is the property data access the handlers depend on. It is
+// implemented by *repositories.PropertyRepository.
+type propertyRepo interface {
+	GetByID(ctx context.Context, id uuid.UUID) (*models.Property, error)
+	Search(ctx context.Context, p repositories.PropertySearchParams) ([]models.Property, error)
+}
 
 // Router owns the HTTP handlers and the route table for the API.
 type Router struct {
@@ -24,7 +42,7 @@ type Router struct {
 
 // NewRouter constructs the Router that serves the booking-service API. It takes
 // the property repository and the booking service the handlers operate on.
-func NewRouter(properties *repositories.PropertyRepository, bookings *services.BookingService) *Router {
+func NewRouter(properties propertyRepo, bookings bookingService) *Router {
 	return &Router{
 		properties: &propertyController{repo: properties},
 		bookings:   &bookingController{service: bookings},

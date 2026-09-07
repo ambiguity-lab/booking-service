@@ -87,7 +87,7 @@ func main() {
 
 	propRepo := repositories.NewPropertyRepository(pool)
 	bookRepo := repositories.NewBookingRepository(pool)
-	bookingSvc := services.NewBookingService(pool, propRepo, bookRepo)
+	bookingSvc := services.NewBookingService(pool, bookRepo)
 
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)

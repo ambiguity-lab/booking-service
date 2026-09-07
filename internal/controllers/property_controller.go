@@ -10,7 +10,7 @@ import (
 
 // propertyController serves property list and detail requests.
 type propertyController struct {
-	repo *repositories.PropertyRepository
+	repo propertyRepo
 }
 
 func (c *propertyController) search(w http.ResponseWriter, r *http.Request) {

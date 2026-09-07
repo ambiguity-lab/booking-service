@@ -13,7 +13,7 @@ import (
 // bookingController serves booking creation, retrieval, cancellation, and user
 // listing requests.
 type bookingController struct {
-	service *services.BookingService
+	service bookingService
 }
 
 // createBookingRequest is the decoded body of a create-booking request. It is
