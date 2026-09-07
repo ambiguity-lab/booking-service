@@ -10,7 +10,7 @@ fails. Data lives in a local PostgreSQL database.
 ## Requirements
 
 - Go 1.23
-- PostgreSQL 16 running locally
+- PostgreSQL 16 or later running locally
 
 ## Getting started
 
