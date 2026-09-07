@@ -13,3 +13,6 @@
 *.swo
 *~
 .DS_Store
+
+/api
+/bin/
