@@ -3,6 +3,7 @@ package controllers
 import (
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/ambiguity-lab/booking-service/internal/repositories"
 	"github.com/go-chi/chi/v5"
@@ -16,16 +17,13 @@ type propertyController struct {
 
 func (c *propertyController) search(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	limit, offset, err := parsePagination(r)
-	if err != nil {
-		writeError(w, err)
-		return
-	}
+	n, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	_, offset, _ := parsePagination(r)
 	params := repositories.PropertySearchParams{
 		Query:  q.Get("q"),
 		City:   q.Get("city"),
 		Sort:   q.Get("sort"),
-		Limit:  limit,
+		Limit:  n,
 		Offset: offset,
 	}
 	props, err := c.repo.Search(r.Context(), params)
