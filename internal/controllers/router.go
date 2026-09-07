@@ -133,10 +133,7 @@ func errorToResponse(err error) (int, errorBody) {
 func parsePagination(r *http.Request) (limit, offset int, err error) {
 	limit = 20
 	if v := r.URL.Query().Get("limit"); v != "" {
-		n, convErr := strconv.Atoi(v)
-		if convErr != nil || n < 0 {
-			return 0, 0, fieldError("limit", "must be a non-negative integer")
-		}
+		n, _ := strconv.Atoi(v)
 		limit = n
 	}
 	if limit > 100 {

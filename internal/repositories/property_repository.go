@@ -74,7 +74,9 @@ func (r *PropertyRepository) Search(ctx context.Context, params PropertySearchPa
 		orderBy = "base_price_cents ASC"
 	case "rating":
 		orderBy = "rating DESC"
-	case "newest":
+	case "newest", "relevance":
+		orderBy = "created_at DESC"
+	default:
 		orderBy = "created_at DESC"
 	}
 

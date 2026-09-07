@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -68,6 +69,52 @@ type Booking struct {
 	CreatedAt time.Time `json:"created_at"`
 	// UpdatedAt is the timestamp of the last status change.
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type bookingJSON struct {
+	ID              uuid.UUID `json:"id"`
+	PropertyID      uuid.UUID `json:"property_id"`
+	UserID          uuid.UUID `json:"user_id"`
+	CheckIn         int64     `json:"check_in"`
+	CheckOut        int64     `json:"check_out"`
+	Rooms           int       `json:"rooms"`
+	Status          string    `json:"status"`
+	TotalPriceCents int       `json:"total_price_cents"`
+	CreatedAt       int64     `json:"created_at"`
+	UpdatedAt       int64     `json:"updated_at"`
+}
+
+func (b Booking) MarshalJSON() ([]byte, error) {
+	return json.Marshal(bookingJSON{
+		ID:              b.ID,
+		PropertyID:      b.PropertyID,
+		UserID:          b.UserID,
+		CheckIn:         b.CheckIn.Unix(),
+		CheckOut:        b.CheckOut.Unix(),
+		Rooms:           b.Rooms,
+		Status:          b.Status,
+		TotalPriceCents: b.TotalPriceCents,
+		CreatedAt:       b.CreatedAt.Unix(),
+		UpdatedAt:       b.UpdatedAt.Unix(),
+	})
+}
+
+func (b *Booking) UnmarshalJSON(data []byte) error {
+	var j bookingJSON
+	if err := json.Unmarshal(data, &j); err != nil {
+		return err
+	}
+	b.ID = j.ID
+	b.PropertyID = j.PropertyID
+	b.UserID = j.UserID
+	b.CheckIn = time.Unix(j.CheckIn, 0).UTC()
+	b.CheckOut = time.Unix(j.CheckOut, 0).UTC()
+	b.Rooms = j.Rooms
+	b.Status = j.Status
+	b.TotalPriceCents = j.TotalPriceCents
+	b.CreatedAt = time.Unix(j.CreatedAt, 0).UTC()
+	b.UpdatedAt = time.Unix(j.UpdatedAt, 0).UTC()
+	return nil
 }
 
 // Sentinel errors returned by the model and repository layers.

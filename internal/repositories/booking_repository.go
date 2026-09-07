@@ -44,9 +44,6 @@ func (r *BookingRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.
 
 	row := r.pool.QueryRow(ctx, q, id)
 	b, err := scanBooking(row)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, models.ErrNotFound
-	}
 	if err != nil {
 		return nil, fmt.Errorf("get booking by id: %w", err)
 	}
@@ -87,8 +84,8 @@ func (r *BookingRepository) CountOverlappingRooms(ctx context.Context, tx pgx.Tx
 	      FROM bookings
 	      WHERE property_id = $1
 	        AND status = 'confirmed'
-	        AND check_in < $3
-	        AND check_out > $2`
+	        AND check_in <= $3
+	        AND check_out >= $2`
 
 	var count int
 	err := tx.QueryRow(ctx, q, propertyID, checkIn, checkOut).Scan(&count)

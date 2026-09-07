@@ -57,6 +57,19 @@ func (s *BookingService) Create(ctx context.Context, req CreateBookingRequest) (
 		return nil, err
 	}
 
+	prop, err := s.bookings.LockProperty(ctx, nil, req.PropertyID)
+	if err != nil {
+		return nil, err
+	}
+
+	booked, err := s.bookings.CountOverlappingRooms(ctx, nil, req.PropertyID, req.CheckIn, req.CheckOut)
+	if err != nil {
+		return nil, err
+	}
+	if booked+req.Rooms > prop.TotalRooms {
+		return nil, models.ErrUnavailable
+	}
+
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return nil, err
@@ -64,19 +77,6 @@ func (s *BookingService) Create(ctx context.Context, req CreateBookingRequest) (
 	defer func() {
 		_ = tx.Rollback(ctx)
 	}()
-
-	prop, err := s.bookings.LockProperty(ctx, tx, req.PropertyID)
-	if err != nil {
-		return nil, err
-	}
-
-	booked, err := s.bookings.CountOverlappingRooms(ctx, tx, req.PropertyID, req.CheckIn, req.CheckOut)
-	if err != nil {
-		return nil, err
-	}
-	if booked+req.Rooms > prop.TotalRooms {
-		return nil, models.ErrUnavailable
-	}
 
 	booking := &models.Booking{
 		PropertyID:      req.PropertyID,

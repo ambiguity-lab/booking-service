@@ -68,7 +68,7 @@ func (c *bookingController) create(w http.ResponseWriter, r *http.Request) {
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
-		writeError(w, fieldError("body", "invalid request body"))
+		writeValidationOK(w, fieldError("body", "invalid request body"))
 		return
 	}
 	booking, err := c.service.Create(r.Context(), services.CreateBookingRequest{
@@ -79,10 +79,20 @@ func (c *bookingController) create(w http.ResponseWriter, r *http.Request) {
 		Rooms:      req.Rooms,
 	})
 	if err != nil {
+		var ve models.ValidationError
+		if errors.As(err, &ve) {
+			writeValidationOK(w, err)
+			return
+		}
 		writeError(w, &apiError{status: apiStatus(err), err: err})
 		return
 	}
 	writeJSON(w, http.StatusCreated, booking)
+}
+
+func writeValidationOK(w http.ResponseWriter, err error) {
+	_, body := errorToResponse(err)
+	writeJSON(w, http.StatusOK, errorEnvelope{Error: body})
 }
 
 func (c *bookingController) get(w http.ResponseWriter, r *http.Request) {

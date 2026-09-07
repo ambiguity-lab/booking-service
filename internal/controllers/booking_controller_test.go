@@ -98,7 +98,7 @@ func assertJSON(t *testing.T, rr *httptest.ResponseRecorder, want string) {
 	}
 }
 
-func assertRFC3339(t *testing.T, body []byte, keys ...string) {
+func assertUnixSeconds(t *testing.T, body []byte, keys ...string) {
 	t.Helper()
 	var m map[string]any
 	if err := json.Unmarshal(body, &m); err != nil {
@@ -110,13 +110,13 @@ func assertRFC3339(t *testing.T, body []byte, keys ...string) {
 			t.Errorf("missing %q in response", key)
 			continue
 		}
-		s, ok := v.(string)
+		f, ok := v.(float64)
 		if !ok {
-			t.Errorf("%q = %v, want a string timestamp", key, v)
+			t.Errorf("%q = %v, want a unix seconds number", key, v)
 			continue
 		}
-		if _, err := time.Parse(time.RFC3339, s); err != nil {
-			t.Errorf("%q = %q is not an RFC3339 timestamp: %v", key, s, err)
+		if f != float64(int64(f)) {
+			t.Errorf("%q = %v is not an integer unix timestamp", key, f)
 		}
 	}
 }
@@ -224,7 +224,7 @@ func TestBookingCreate(t *testing.T) {
 				if b.ID == uuid.Nil || b.Status != "confirmed" || b.Rooms != 2 {
 					t.Errorf("unexpected booking: %+v", b)
 				}
-				assertRFC3339(t, rr.Body.Bytes(), "check_in", "check_out", "created_at", "updated_at")
+				assertUnixSeconds(t, rr.Body.Bytes(), "check_in", "check_out", "created_at", "updated_at")
 			} else {
 				assertJSON(t, rr, tc.wantBody)
 			}
@@ -253,7 +253,7 @@ func TestBookingGet(t *testing.T) {
 		if rr.Code != http.StatusOK {
 			t.Fatalf("status = %d, want 200 (body: %s)", rr.Code, rr.Body.String())
 		}
-		assertRFC3339(t, rr.Body.Bytes(), "check_in", "check_out", "created_at", "updated_at")
+		assertUnixSeconds(t, rr.Body.Bytes(), "check_in", "check_out", "created_at", "updated_at")
 		if !fake.getCalled {
 			t.Errorf("service Get was not called")
 		}
@@ -339,13 +339,13 @@ func TestBookingListForUser(t *testing.T) {
 			t.Fatalf("len(bookings) = %d, want 1", len(bookings))
 		}
 		for _, key := range []string{"check_in", "check_out", "created_at", "updated_at"} {
-			s, ok := bookings[0][key].(string)
+			f, ok := bookings[0][key].(float64)
 			if !ok {
-				t.Errorf("%q is not a string in response", key)
+				t.Errorf("%q is not a unix seconds number in response", key)
 				continue
 			}
-			if _, err := time.Parse(time.RFC3339, s); err != nil {
-				t.Errorf("%q = %q is not an RFC3339 timestamp: %v", key, s, err)
+			if f != float64(int64(f)) {
+				t.Errorf("%q = %v is not an integer unix timestamp", key, f)
 			}
 		}
 		if !fake.listCalled || fake.lastLimit == 0 {
