@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -11,8 +10,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ambiguity-lab/booking-service/internal/controllers"
+	"github.com/ambiguity-lab/booking-service/internal/middleware"
+	"github.com/ambiguity-lab/booking-service/internal/repositories"
+	"github.com/ambiguity-lab/booking-service/internal/services"
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 )
@@ -83,16 +85,16 @@ func main() {
 	}
 	slog.Info("database connection established")
 
-	r := chi.NewRouter()
-	r.Use(middleware.RealIP)
-	r.Use(middleware.Recoverer)
-	r.Use(middleware.RequestID)
+	propRepo := repositories.NewPropertyRepository(pool)
+	bookRepo := repositories.NewBookingRepository(pool)
+	bookingSvc := services.NewBookingService(pool, propRepo, bookRepo)
 
-	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
-	})
+	r := chi.NewRouter()
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RequestLogger)
+	r.Use(middleware.Recoverer)
+
+	controllers.NewRouter(propRepo, bookingSvc).Routes(r)
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.port,
